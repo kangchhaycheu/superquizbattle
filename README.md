@@ -12,3 +12,8 @@
 - install NodeJS version Cmd:
     - curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
     - sudo apt-get install -y nodejs
+
+## Error Message
+listen EADDRINUSE: address already in use :::3000
+    - lsof -i:3000 // check for actived port
+    - kill -9 PID // Kill that process
