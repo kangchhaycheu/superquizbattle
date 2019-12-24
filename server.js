@@ -6,8 +6,8 @@ var qaControl = require('./classes/QuestionController.js');
 
 var objPlayers = {};
 var gameDatas = {};
-var objQuestions = {};
-
+var pvpQuestionsControl = {};
+var answerTimer = {};
 // dbCon.Select("SELECT * FROM tblQA", function(result){ 
 // 	if(result.length > 0){
 // 		for(var i = 0; i < result.length; i++){
@@ -35,7 +35,7 @@ io.on('connection', function (socket) {
     }
 
     socket.on('FindMatch', function(data){
-        if(objPlayers[socket.id] != null){
+        if(IsPlayerExisted(socket.id)){
             socket.emit('OnFindingMatch',{message:"Finding Match"});
             objPlayers[socket.id].status = gp.PlayerStatus.findMatch;
             for(var sid in objPlayers){ //loop through all find match player
@@ -53,59 +53,148 @@ io.on('connection', function (socket) {
 		objPlayers[curSid].roomId = roomId;
 		objPlayers[curSid].status = gp.PlayerStatus.matchPending;
 		socket.broadcast.to(othSid).emit("OnMatchFound", {'roomId': roomId});
-		// socket.broadcast.to(othSid).emit("OnPlayerInformation", PlayerInformation(curSid)); //currentplayer info to opponent
+		socket.broadcast.to(othSid).emit("OnPlayerInformation", PlayerInformation(curSid)); //currentplayer info to opponent
 		socket.emit("OnMatchFound", {'roomId': roomId});
-		// socket.emit("OnPlayerInformation", PlayerInformation(othSid)); //opponent info to currentplayer
+		socket.emit("OnPlayerInformation", PlayerInformation(othSid)); //opponent info to currentplayer
         var p = {};
         var initPlayer = {status:gp.PlayerStatus.inGame, score:0,answers:[]};
-		p[objPlayers[othSid].playerId] = initPlayer;
-		p[objPlayers[curSid].playerId] = initPlayer;
+		p[objPlayers[othSid].playerId] = JSON.parse(JSON.stringify(initPlayer)); // not reference
+		p[objPlayers[curSid].playerId] = JSON.parse(JSON.stringify(initPlayer));
 		gameDatas[roomId] = {
             gameStatus: 0,
 			players: p
-		}
+        }
     }
+    function PlayerInformation(sid){
+		var pl = {};
+        pl.playerId = objPlayers[sid].playerId;
+		pl.name = objPlayers[sid].name;
+		return pl;
+	}
 
     socket.on('StartGame',function(){ // both player ping start game
-		var sid = socket.id;
-		var roomId = objPlayers[sid].roomId;
-		socket.join(roomId);
-		var status = gameDatas[roomId].gameStatus;
-		objPlayers[sid].status = gp.PlayerStatus.inGame;
-        gameDatas[roomId].gameStatus = status + 1;
-		if(gameDatas[roomId].gameStatus == 2){
-            objQuestions[roomId] = {questionsIndex: qaControl.GenerateQuestionsIndex()};
-            var data = {};
-            data.gameStatus = gp.PlayerStatus.running;
-            data.round = 1;
-            var qa = qaControl.GetQuestion(objQuestions[roomId].questionsIndex[data.round - 1]);
-            data.question = qa.question;
-            data.answers = [];
-            var nums = [0,1,2,3];
-            for(var i = 0; i < 4; i++){
-                j = Math.floor(Math.random() * nums.length);
-                data.answers.push(qa.answers[nums[j]]);
-                if(nums[j] == 0){ // answers index 0 is correct answer; 
-                    data.correctIndex = i;
-                }
-                nums.splice(j,1);
+        if(IsPlayerExisted(socket.id)){
+            var sid = socket.id;
+            var roomId = objPlayers[sid].roomId;
+            socket.join(roomId);
+            var status = gameDatas[roomId].gameStatus;
+            objPlayers[sid].status = gp.PlayerStatus.inGame;
+            gameDatas[roomId].gameStatus = status + 1;
+            if(gameDatas[roomId].gameStatus == 2){
+                pvpQuestionsControl[roomId] = {questionsIndex: qaControl.GenerateQuestionsIndex()};
+                gameDatas[roomId] = GetGameData(1, roomId, gameDatas[roomId].players);
+                io.to(roomId).emit('OnGameStarted',gameDatas[roomId]);
+                answerTimer[roomId] = {
+                    timer:setTimeout(() => {
+                        SetAnswerTimer(roomId);
+                    }, 10000)
+                };
             }
-            data.players = gameDatas[roomId].players;
-            gameDatas[roomId] = data;
-			// var getplayerIds = GetplayerIdFromObject(gameDatas[roomId].players);
-			// for(var i = 0; i < 2; i++){
-			// 	dbCon.Update("Update tblplayer set gameID = '"+roomId+"' where id = '" + getplayerIds[i] +"'");
-			// 	gameDatas[roomId].players[getplayerIds[i]].gameplay = CreateBoard(i);
-			// 	gameDatas[roomId].players[getplayerIds[i]].status = gp.PlayerStatus.inGame;
-			// }
-			// gameDatas[roomId].whoTurn = getplayerIds[0];
-			// gameDatas[roomId].lastUpdate = Date.now();
-			io.to(roomId).emit('OnGameStarted',gameDatas[roomId]);
-		}
-	});
+        }
+    });
     
+    function GetGameData(round,roomId,players){
+        let data = {};
+        data.gameStatus = gp.PlayerStatus.running;
+        data.round = round;
+        let qa = qaControl.GetQuestion(pvpQuestionsControl[roomId].questionsIndex[data.round - 1]);
+        data.question = qa.question;
+        data.answers = [];
+        let nums = [0,1,2,3];
+        for(let i = 0; i < 4; i++){
+            j = Math.floor(Math.random() * nums.length);
+            data.answers.push(qa.answers[nums[j]]);
+            if(nums[j] == 0){ // answers index 0 is correct answer; 
+                data.correctIndex = i;
+            }
+            nums.splice(j,1);
+        }
+        data.players = players;
+        return data;
+    }
+    function SetAnswerTimer(roomId){
+        let gd = gameDatas[roomId];
+        let round = gd.round; 
+        let playersId = gp.GetPlayerIdFromObject(gd.players);
+        for(let i = 0; i < 2; i++){
+            if(gd.players[playersId[i]].answers.length == round - 1){
+                gd.players[playersId[i]].answers.push(0);
+                let json = {playerId: playersId[i], round:round,answerIndex:-1, score:gd.players[playersId[i]].score};
+                io.to(roomId).emit('OnGameAnswer',json);
+            }
+        }
+        if(round == 10){
+            io.to(roomId).emit('OnGameFinished',gameDatas[roomId]);
+            delete gameDatas[roomId];
+            delete pvpQuestionsControl[roomId];
+        }else{ // move next
+            setTimeout(function(){
+                gameDatas[roomId] = GetGameData(round + 1, roomId, gameDatas[roomId].players);
+                io.to(roomId).emit('OnGameNextQuestion',gameDatas[roomId]);
+                answerTimer[roomId] = {
+                    timer:setTimeout(() => {
+                        SetAnswerTimer(roomId);
+                    }, 11000)
+                };
+            },1 * 1000);
+        }
+    }
+
+    socket.on ('GameAnswer',function(data){
+        if(!IsPlayerExisted(socket.id)){
+            return;
+        }
+        let pl = objPlayers[socket.id];
+        if(pl == null) return;
+        gd = gameDatas[pl.roomId];
+        if(gd == null) return; 
+        let round = gd.round; 
+        if(gd.players[pl.playerId].answers.length == round - 1){
+            if(data['answerIndex'] == gd.correctIndex){ //correc Answer
+                gd.players[pl.playerId].answers.push(1);
+                gd.players[pl.playerId].score += 10;
+            }else{
+                gd.players[pl.playerId].answers.push(0);
+            }
+        }else if(gd.players[pl.playerId].answers.length == round){ // player round different from game round
+            socket.emit('OnGameAnswer', {failed: "answered"});
+            return;
+        }else{ //through exception
+
+        }
+        let oppId = gp.GetOpponentId(gd.players,pl.playerId);
+        if(gd.players[oppId].status == gp.PlayerStatus.disconnected){
+            if(gd.players[oppId].answers.length == round - 1){
+                gd.players[oppId].answers.push(0);
+            }
+        }
+        // gameDatas[pl.roomId] = gd;
+        let json = {playerId: pl.playerId, round:round,answerIndex:data['answerIndex'], score:gd.players[pl.playerId].score};
+        io.to(pl.roomId).emit('OnGameAnswer',json);
+        let index = gp.GetPlayerIdFromObject(gd.players);
+        if(gd.players[index[0]].answers.length == gd.players[index[1]].answers.length){
+            clearTimeout(answerTimer[pl.roomId].timer);
+            if(round == 10){ //finished
+                //clear game data
+                io.to(pl.roomId).emit('OnGameFinished',gameDatas[pl.roomId]);
+                delete gameDatas[pl.roomId];
+                delete pvpQuestionsControl[pl.roomId];
+            }else{ // move next
+                setTimeout(function(){
+                    gameDatas[pl.roomId] = GetGameData(round + 1, pl.roomId, gameDatas[pl.roomId].players);
+                    io.to(pl.roomId).emit('OnGameNextQuestion',gameDatas[pl.roomId]);
+                    answerTimer[pl.roomId] = {
+                        timer:setTimeout(() => {
+                            SetAnswerTimer(pl.roomId);
+                        }, 11000)
+                    };
+                },1 * 1000);
+            }
+        }
+    });
+ 
     socket.on('CancelFinding',function (){
-		if(objPlayers[socket.id] != null){
+		if(IsPlayerExisted(socket.id)){
 			if(objPlayers[socket.id].status == gp.PlayerStatus.findMatch){
 				objPlayers[socket.id].status = gp.PlayerStatus.home;
 				socket.emit('OnCanceledFinding',{});
@@ -114,59 +203,66 @@ io.on('connection', function (socket) {
 	});
 
     socket.on('Lobby',function(){
-		// objPlayers[socket.id].status = enumAllStatus.home;
-		// socket.emit('OnLobby',objPlayers[socket.id]);
+        if(IsPlayerExisted(socket.id)){
+            objPlayers[socket.id].status = gp.PlayerStatus.home;
+            socket.emit('OnLobby',objPlayers[socket.id]);
+        }
     });
-    
-    // function GetplayerIdFromObject(players){
-	// 	var tempID = [];
-	// 	for(var ids in players){
-	// 		tempID.push(ids);
-	// 	}
-	// 	return tempID;
-	// }
+
+    socket.on('disconnect', function (){
+		if(IsPlayerExisted(socket.id)){
+			var pl = objPlayers[socket.id];
+			var gd = gameDatas[pl.roomId];
+			if(pl.status == gp.PlayerStatus.inGame){ // disconnect while in game
+                if(gd != null){ //game still in process
+                    gd.players[pl.playerId].status = gp.PlayerStatus.disconnected;
+                    if(gd.players[gp.GetOpponentId(gd.players,pl.playerId)].status == gp.PlayerStatus.disconnected){ // both player disconnected
+                        delete gameDatas[pl.roomId];
+                        delete pvpQuestionsControl[pl.roomId]; 
+                    }else{
+                        io.to(pl.roomId).emit('OnOpponentDisconnected',{id:pl.playerId}); // send to another player except disconnector
+                    }
+				}
+			}
+            console.log("Disconnected Id = " + objPlayers[socket.id].playerId);
+            delete objPlayers[socket.id];
+		}
+    });
+
+    function IsPlayerExisted(sid){
+		if(objPlayers[sid] != null){
+			return true;
+		}else{
+			socket.emit("OnPlayerException",{});
+        }
+        return false;
+	}    
 });
 
+//Continue from GameAnswer => add 15sec timer, set wrong if no answer, cancel timer
+//check disconnect => debug player disconnect, disconnect not work not yet
 
-// var data = {};
+//catch all exception send to client
+//clear qaObject when game finsih
+//player answer
+//game duration
+//
 
-// var qqa = [];
-// qqa = qaControl.GenerateQuestionsIndex();
-//             data.gameStatus = gp.PlayerStatus.running;
-//             data.round = 1;
-//             var qa = qaControl.GetQuestion(qqa[data.round - 1]);
-//             data.question = qa.question;
-//             data.answers = [];
-//             var nums = [0,1,2,3];
-//             // ranChoice = [];
-//             for(var i = 0; i < 4; i++){
-//                 j = Math.floor(Math.random() * nums.length);
-//                 // ranChoice.push(nums[j]);
-//                 data.answers.push(qa.answers[nums[j]]);
-//                 if(nums[j] == 0){
-//                     data.correctIndex = i;
-//                 }
-//                 nums.splice(j,1);
-//             }
-            
-//             console.log(JSON.stringify(data));
-
-// p[123] = {status:gp.PlayerStatus.inGame};
-// p[321] = {status:gp.PlayerStatus.inGame};
-// gameDatas[222] = {
-//     players: p
+// let da = "123132";
+// function timers(cd){
+//     console.log(cd);
 // }
-// var data = {};
-// data.players = gameDatas[222].players;
-// data.status = "asfds";
-
-// var arr = ['1','12'];
-// var rao = "sadf";
-// objQuestions[rao] = {
-//     asw: arr
+// let var1  = setTimeout(function(){ 
+//     timers(da);
+//     // console.log("Hello 1"); 
+// }, 1000);
+// let var2 = setTimeout(function(){ console.log("Hello 2"); }, 2000);
+// let var3 = setTimeout(function(){ console.log("Hello 3"); }, 3000);
+// var times = {
+//     can :[var1,var2,var3]
 // };
 
-// objQuestions[123].questionsIndex = arr;
+// clearTimeout(times.can[2]);
 
 
 
