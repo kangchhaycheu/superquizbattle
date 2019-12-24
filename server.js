@@ -52,10 +52,10 @@ io.on('connection', function (socket) {
 		objPlayers[othSid].status = gp.PlayerStatus.matchPending;
 		objPlayers[curSid].roomId = roomId;
 		objPlayers[curSid].status = gp.PlayerStatus.matchPending;
-		socket.broadcast.to(othSid).emit("OnMatchFound", {'roomId': roomId});
-		socket.broadcast.to(othSid).emit("OnPlayerInformation", PlayerInformation(curSid)); //currentplayer info to opponent
-		socket.emit("OnMatchFound", {'roomId': roomId});
-		socket.emit("OnPlayerInformation", PlayerInformation(othSid)); //opponent info to currentplayer
+		socket.broadcast.to(othSid).emit("OnMatchFound", {'roomId': roomId,'opponentInfo':PlayerInformation(curSid)});
+		// socket.broadcast.to(othSid).emit("OnPlayerInformation", PlayerInformation(curSid)); //currentplayer info to opponent
+		socket.emit("OnMatchFound", {'roomId': roomId, 'opponentInfo':PlayerInformation(othSid)});
+		// socket.emit("OnPlayerInformation", PlayerInformation(othSid)); //opponent info to currentplayer
         var p = {};
         var initPlayer = {status:gp.PlayerStatus.inGame, score:0,answers:[]};
 		p[objPlayers[othSid].playerId] = JSON.parse(JSON.stringify(initPlayer)); // not reference
@@ -66,9 +66,11 @@ io.on('connection', function (socket) {
         }
     }
     function PlayerInformation(sid){
-		var pl = {};
-        pl.playerId = objPlayers[sid].playerId;
-		pl.name = objPlayers[sid].name;
+		var pl = {
+            playerId : objPlayers[sid].playerId,
+            name : objPlayers[sid].playerName
+        };
+        console.log(JSON.stringify(pl));
 		return pl;
 	}
 
@@ -193,11 +195,11 @@ io.on('connection', function (socket) {
         }
     });
  
-    socket.on('CancelFinding',function (){
+    socket.on('CancelMatchFinding',function (){
 		if(IsPlayerExisted(socket.id)){
 			if(objPlayers[socket.id].status == gp.PlayerStatus.findMatch){
 				objPlayers[socket.id].status = gp.PlayerStatus.home;
-				socket.emit('OnCanceledFinding',{});
+				socket.emit('OnCanceledMatchFinding',{});
 			}
 		}
 	});
@@ -239,12 +241,14 @@ io.on('connection', function (socket) {
 	}    
 });
 
-//Continue from GameAnswer => add 15sec timer, set wrong if no answer, cancel timer
-//check disconnect => debug player disconnect, disconnect not work not yet
 
+// var aa = {
+//     name : "adsfasf",
+//     playerId : "123"
+// };
+// console.log(JSON.stringify(aa));
 //catch all exception send to client
-//clear qaObject when game finsih
-//player answer
+//clear qaObject when game finish
 //game duration
 //
 
