@@ -25,6 +25,9 @@ io.on('connection', function (socket) {
     socket.on('PlayerLogin',function(data){
         PlayerLogin(data['playerId']);
     });
+    socket.on('ServerTime', function (){
+        socket.emit('OnServerTime', {dateTime:Date.now()});
+    });
     function PlayerLogin(playerId){
         var currentPlayer = {};
         currentPlayer.playerId = playerId;
@@ -123,9 +126,6 @@ io.on('connection', function (socket) {
             }
         }
         if(round == 10){
-            // io.to(roomId).emit('OnGameFinished',gameDatas[roomId]);
-            // delete gameDatas[roomId];
-            // delete pvpQuestionsControl[roomId];
             EmitGameFinish(roomId);
         }else{ // move next
             setTimeout(function(){
@@ -168,17 +168,12 @@ io.on('connection', function (socket) {
                 gd.players[oppId].answers.push(0);
             }
         }
-        // gameDatas[pl.roomId] = gd;
         let json = {playerId: pl.playerId, round:round,answerIndex:data['answerIndex'], score:gd.players[pl.playerId].score};
         io.to(pl.roomId).emit('OnGameAnswer',json);
         let index = gp.GetPlayerIdFromObject(gd.players);
         if(gd.players[index[0]].answers.length == gd.players[index[1]].answers.length){
             clearTimeout(answerTimer[pl.roomId].timer);
             if(round == 10){ //finished
-                //clear game data
-                // io.to(pl.roomId).emit('OnGameFinished',gameDatas[pl.roomId]);
-                // delete gameDatas[pl.roomId];
-                // delete pvpQuestionsControl[pl.roomId];
                 EmitGameFinish(pl.roomId);
             }else{ // move next
                 setTimeout(function(){
@@ -253,20 +248,18 @@ io.on('connection', function (socket) {
 			socket.emit("OnPlayerException",{});
         }
         return false;
-	}    
+    }    
+    
 });
 
-
-// var aa = {
-//     name : "adsfasf",
-//     playerId : "123"
-// };
-// console.log(JSON.stringify(aa));
 //catch all exception send to client
 //clear qaObject when game finish
 //game duration
 
-
+// var dn = Date.now(); 
+// dn += 60000;
+// var dt1 = new Date(dn);
+// console.log(" dn =  " + dt1.toTimeString());
 
 //these still not work yet. 
 process.on('unhandledRejection', (reason, p) => {
