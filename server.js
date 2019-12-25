@@ -53,9 +53,7 @@ io.on('connection', function (socket) {
 		objPlayers[curSid].roomId = roomId;
 		objPlayers[curSid].status = gp.PlayerStatus.matchPending;
 		socket.broadcast.to(othSid).emit("OnMatchFound", {'roomId': roomId,'opponentInfo':PlayerInformation(curSid)});
-		// socket.broadcast.to(othSid).emit("OnPlayerInformation", PlayerInformation(curSid)); //currentplayer info to opponent
 		socket.emit("OnMatchFound", {'roomId': roomId, 'opponentInfo':PlayerInformation(othSid)});
-		// socket.emit("OnPlayerInformation", PlayerInformation(othSid)); //opponent info to currentplayer
         var p = {};
         var initPlayer = {status:gp.PlayerStatus.inGame, score:0,answers:[]};
 		p[objPlayers[othSid].playerId] = JSON.parse(JSON.stringify(initPlayer)); // not reference
@@ -70,11 +68,10 @@ io.on('connection', function (socket) {
             playerId : objPlayers[sid].playerId,
             name : objPlayers[sid].playerName
         };
-        console.log(JSON.stringify(pl));
 		return pl;
 	}
 
-    socket.on('StartGame',function(){ // both player ping start game
+    socket.on('StartGame',function(){ //both player ping start game
         if(IsPlayerExisted(socket.id)){
             var sid = socket.id;
             var roomId = objPlayers[sid].roomId;
@@ -126,9 +123,10 @@ io.on('connection', function (socket) {
             }
         }
         if(round == 10){
-            io.to(roomId).emit('OnGameFinished',gameDatas[roomId]);
-            delete gameDatas[roomId];
-            delete pvpQuestionsControl[roomId];
+            // io.to(roomId).emit('OnGameFinished',gameDatas[roomId]);
+            // delete gameDatas[roomId];
+            // delete pvpQuestionsControl[roomId];
+            EmitGameFinish(roomId);
         }else{ // move next
             setTimeout(function(){
                 gameDatas[roomId] = GetGameData(round + 1, roomId, gameDatas[roomId].players);
@@ -161,8 +159,8 @@ io.on('connection', function (socket) {
         }else if(gd.players[pl.playerId].answers.length == round){ // player round different from game round
             socket.emit('OnGameAnswer', {failed: "answered"});
             return;
-        }else{ //through exception
-
+        }else{
+            socket.emit("OnPlayerException",{});
         }
         let oppId = gp.GetOpponentId(gd.players,pl.playerId);
         if(gd.players[oppId].status == gp.PlayerStatus.disconnected){
@@ -178,9 +176,10 @@ io.on('connection', function (socket) {
             clearTimeout(answerTimer[pl.roomId].timer);
             if(round == 10){ //finished
                 //clear game data
-                io.to(pl.roomId).emit('OnGameFinished',gameDatas[pl.roomId]);
-                delete gameDatas[pl.roomId];
-                delete pvpQuestionsControl[pl.roomId];
+                // io.to(pl.roomId).emit('OnGameFinished',gameDatas[pl.roomId]);
+                // delete gameDatas[pl.roomId];
+                // delete pvpQuestionsControl[pl.roomId];
+                EmitGameFinish(pl.roomId);
             }else{ // move next
                 setTimeout(function(){
                     gameDatas[pl.roomId] = GetGameData(round + 1, pl.roomId, gameDatas[pl.roomId].players);
@@ -194,6 +193,22 @@ io.on('connection', function (socket) {
             }
         }
     });
+    function EmitGameFinish(roomId){
+        let ids = gp.GetPlayerIdFromObject(gameDatas[roomId].players);
+        let winner = "gameDraw";
+        if(gameDatas[roomId].players[ids[0]].score > gameDatas[roomId].players[ids[1]].score){
+            winner = ids[0];
+        }else if(gameDatas[roomId].players[ids[0]].score < gameDatas[roomId].players[ids[1]].score){
+            winner = ids[1];
+        }
+        let js = {
+            winner: winner,
+            players: gameDatas[roomId].players
+        };
+        io.to(roomId).emit('OnGameFinished',js);
+        delete gameDatas[roomId];
+        delete pvpQuestionsControl[roomId];
+    }
  
     socket.on('CancelMatchFinding',function (){
 		if(IsPlayerExisted(socket.id)){
@@ -250,23 +265,6 @@ io.on('connection', function (socket) {
 //catch all exception send to client
 //clear qaObject when game finish
 //game duration
-//
-
-// let da = "123132";
-// function timers(cd){
-//     console.log(cd);
-// }
-// let var1  = setTimeout(function(){ 
-//     timers(da);
-//     // console.log("Hello 1"); 
-// }, 1000);
-// let var2 = setTimeout(function(){ console.log("Hello 2"); }, 2000);
-// let var3 = setTimeout(function(){ console.log("Hello 3"); }, 3000);
-// var times = {
-//     can :[var1,var2,var3]
-// };
-
-// clearTimeout(times.can[2]);
 
 
 
