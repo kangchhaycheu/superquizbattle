@@ -162,7 +162,6 @@ io.on('connection', function (socket) {
             socket.emit("OnPlayerException",{});
             return;
         }
-        console.log("GameAnwer = " + JSON.stringify(data));
         let round = gd.round; 
         if(gd.players[pl.playerId].answers.length == round - 1){
             if(data['answerIndex'] == gd.correctIndex){ //correc Answer
@@ -178,9 +177,7 @@ io.on('connection', function (socket) {
             socket.emit("OnPlayerException",{});
             return;
         }
-        console.log("players = " + JSON.stringify(gd.players) + ";;; Player id = " + JSON.stringify(pl.playerId));
         let oppId = gp.GetOpponentId(gd.players,pl.playerId);
-        console.log("Opp ID = " + oppId);
         if(gd.players[oppId].status == gp.PlayerStatus.disconnected){
             if(gd.players[oppId].answers.length == round - 1){
                 gd.players[oppId].answers.push(0);
@@ -270,6 +267,7 @@ io.on('connection', function (socket) {
     }    
 });
 
+//catch if player has the same id
 //catch all exception send to client
 //clear qaObject when game finish
 //game duration
