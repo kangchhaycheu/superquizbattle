@@ -33,8 +33,9 @@ io.on('connection', function (socket) {
         currentPlayer.playerId = playerId;
         currentPlayer.playerName = "Guest " + playerId;
         currentPlayer.status = gp.PlayerStatus.home;
-        objPlayers[socket.id] = currentPlayer;
         socket.emit('OnLobby', currentPlayer);
+        currentPlayer.roomId = "-1";
+        objPlayers[socket.id] = currentPlayer;
     }
 
     socket.on('FindMatch', function(data){
@@ -116,6 +117,9 @@ io.on('connection', function (socket) {
     }
     function SetAnswerTimer(roomId){
         let gd = gameDatas[roomId];
+        if(gd == null){
+            return;
+        }
         let round = gd.round; 
         let playersId = gp.GetPlayerIdFromObject(gd.players);
         for(let i = 0; i < 2; i++){
@@ -144,10 +148,20 @@ io.on('connection', function (socket) {
         if(!IsPlayerExisted(socket.id)){
             return;
         }
-        let pl = objPlayers[socket.id];
-        if(pl == null) return;
-        gd = gameDatas[pl.roomId];
-        if(gd == null) return; 
+        var isExisted = false;
+        var pl = objPlayers[socket.id];
+        if(pl != null){
+            if(pl.roomId != -1){
+                var gd = gameDatas[pl.roomId];
+                if(gd != null){
+                    isExisted = true;
+                }
+            }
+        }
+        if(!isExisted){
+            socket.emit("OnPlayerException",{});
+            return;
+        }
         let round = gd.round; 
         if(gd.players[pl.playerId].answers.length == round - 1){
             if(data['answerIndex'] == gd.correctIndex){ //correc Answer
@@ -161,6 +175,7 @@ io.on('connection', function (socket) {
             return;
         }else{
             socket.emit("OnPlayerException",{});
+            return;
         }
         let oppId = gp.GetOpponentId(gd.players,pl.playerId);
         if(gd.players[oppId].status == gp.PlayerStatus.disconnected){
@@ -188,6 +203,7 @@ io.on('connection', function (socket) {
             }
         }
     });
+
     function EmitGameFinish(roomId){
         let ids = gp.GetPlayerIdFromObject(gameDatas[roomId].players);
         let winner = "gameDraw";
@@ -236,7 +252,7 @@ io.on('connection', function (socket) {
                     }
 				}
 			}
-            console.log("Disconnected Id = " + objPlayers[socket.id].playerId);
+            // console.log("Disconnected Id = " + objPlayers[socket.id].playerId);
             delete objPlayers[socket.id];
 		}
     });
@@ -249,7 +265,6 @@ io.on('connection', function (socket) {
         }
         return false;
     }    
-    
 });
 
 //catch all exception send to client
@@ -262,6 +277,7 @@ io.on('connection', function (socket) {
 // console.log(" dn =  " + dt1.toTimeString());
 
 //these still not work yet. 
+
 process.on('unhandledRejection', (reason, p) => {
     console.error(reason, 'Unhandled Rejection at Promise', p);
   })
