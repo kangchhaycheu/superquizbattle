@@ -106,7 +106,7 @@ io.on('connection', function (socket) {
         data.round = round;
         let qa = qaControl.GetQuestion(pvpQuestionsControl[roomId].questionsIndex[data.round - 1]);
         data.question = qa.question;
-        data.timeEnd = '' + Date.now() + questionDuration;// Math.floor((Date.now() + questionDuration) /1000);
+        data.timeEnd = '' + (Date.now() + questionDuration);// Math.floor((Date.now() + questionDuration) /1000);
         data.answers = [];
         let nums = [0,1,2,3];
         for(let i = 0; i < 4; i++){
@@ -287,7 +287,6 @@ io.on('connection', function (socket) {
     }
 });
 
-// console.log(Math.floor(Date.now()/1000));
 
 //catch if player has the same id
 //catch all exception send to client
