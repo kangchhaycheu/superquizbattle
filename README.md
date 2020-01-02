@@ -1,5 +1,8 @@
 # superquizbattle
-
+## Todo
+- Database
+- Track answer
+- score
 
 ## Framework Used
 - Jenkins and Github for continue integration

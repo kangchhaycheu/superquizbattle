@@ -95,7 +95,7 @@ io.on('connection', function (socket) {
             answerTimer[roomId] = {
                 timer:setTimeout(() => {
                     SetAnswerTimer(roomId);
-                },)
+                },questionDuration)
             };
         }
     });
@@ -153,7 +153,6 @@ io.on('connection', function (socket) {
         if(!IsGameCondition()){
             return;
         }
-        let pl = objPlayers[socket.id];
         let pl = objPlayers[socket.id];
         let gd = gameDatas[pl.roomId];
         let round = gd.round; 
