@@ -8,6 +8,8 @@ var objPlayers = {};
 var gameDatas = {};
 var pvpQuestionsControl = {};
 var answerTimer = {};
+let questionDuration = 10000; 
+
 // dbCon.Select("SELECT * FROM tblQA", function(result){ 
 // 	if(result.length > 0){
 // 		for(var i = 0; i < result.length; i++){
@@ -17,6 +19,7 @@ var answerTimer = {};
 //     }
 //     // console.log("quest = " + qaControl.GetQuestion()["question"] + " answer = " + qaControl.GetQuestion().answer);
 // });
+
 for(var i = 0; i < 40; i++){
     qaControl.AddQuestion("Is this a hard Question with Number " + i,"Correct Answer " + i,"Wrong Answer 1","Wrong Answer 2","Wrong Answer 3","1");
 }
@@ -26,7 +29,7 @@ io.on('connection', function (socket) {
         PlayerLogin(data['playerId']);
     });
     socket.on('ServerTime', function (){
-        socket.emit('OnServerTime', {dateTime:Date.now()});
+        socket.emit('OnServerTime', {dateTime:GetDateTime()});
     });
     function PlayerLogin(playerId){
         var currentPlayer = {};
@@ -76,23 +79,24 @@ io.on('connection', function (socket) {
 	}
 
     socket.on('StartGame',function(){ //both player ping start game
-        if(IsPlayerExisted(socket.id)){
-            var sid = socket.id;
-            var roomId = objPlayers[sid].roomId;
-            socket.join(roomId);
-            var status = gameDatas[roomId].gameStatus;
-            objPlayers[sid].status = gp.PlayerStatus.inGame;
-            gameDatas[roomId].gameStatus = status + 1;
-            if(gameDatas[roomId].gameStatus == 2){
-                pvpQuestionsControl[roomId] = {questionsIndex: qaControl.GenerateQuestionsIndex()};
-                gameDatas[roomId] = GetGameData(1, roomId, gameDatas[roomId].players);
-                io.to(roomId).emit('OnGameStarted',gameDatas[roomId]);
-                answerTimer[roomId] = {
-                    timer:setTimeout(() => {
-                        SetAnswerTimer(roomId);
-                    }, 10000)
-                };
-            }
+        if(!IsGameCondition()){
+            return;
+        }
+        var sid = socket.id;
+        var roomId = objPlayers[sid].roomId;
+        socket.join(roomId);
+        var status = gameDatas[roomId].gameStatus;
+        objPlayers[sid].status = gp.PlayerStatus.inGame;
+        gameDatas[roomId].gameStatus = status + 1;
+        if(gameDatas[roomId].gameStatus == 2){
+            pvpQuestionsControl[roomId] = {questionsIndex: qaControl.GenerateQuestionsIndex()};
+            gameDatas[roomId] = GetGameData(1, roomId, gameDatas[roomId].players);
+            io.to(roomId).emit('OnGameStarted',gameDatas[roomId]);
+            answerTimer[roomId] = {
+                timer:setTimeout(() => {
+                    SetAnswerTimer(roomId);
+                },)
+            };
         }
     });
     
@@ -102,6 +106,7 @@ io.on('connection', function (socket) {
         data.round = round;
         let qa = qaControl.GetQuestion(pvpQuestionsControl[roomId].questionsIndex[data.round - 1]);
         data.question = qa.question;
+        data.timeEnd = GetDateTime() + questionDuration;
         data.answers = [];
         let nums = [0,1,2,3];
         for(let i = 0; i < 4; i++){
@@ -138,30 +143,19 @@ io.on('connection', function (socket) {
                 answerTimer[roomId] = {
                     timer:setTimeout(() => {
                         SetAnswerTimer(roomId);
-                    }, 11000)
+                    }, questionDuration)
                 };
             },1 * 1000);
         }
     }
 
     socket.on ('GameAnswer',function(data){
-        if(!IsPlayerExisted(socket.id)){
+        if(!IsGameCondition()){
             return;
         }
-        var isExisted = false;
-        var pl = objPlayers[socket.id];
-        if(pl != null){
-            if(pl.roomId != -1){
-                var gd = gameDatas[pl.roomId];
-                if(gd != null){
-                    isExisted = true;
-                }
-            }
-        }
-        if(!isExisted){
-            socket.emit("OnPlayerException",{});
-            return;
-        }
+        let pl = objPlayers[socket.id];
+        let pl = objPlayers[socket.id];
+        let gd = gameDatas[pl.roomId];
         let round = gd.round; 
         if(gd.players[pl.playerId].answers.length == round - 1){
             if(data['answerIndex'] == gd.correctIndex){ //correc Answer
@@ -197,7 +191,7 @@ io.on('connection', function (socket) {
                     answerTimer[pl.roomId] = {
                         timer:setTimeout(() => {
                             SetAnswerTimer(pl.roomId);
-                        }, 11000)
+                        }, questionDuration)
                     };
                 },1 * 1000);
             }
@@ -256,15 +250,41 @@ io.on('connection', function (socket) {
             delete objPlayers[socket.id];
 		}
     });
-
-    function IsPlayerExisted(sid){
-		if(objPlayers[sid] != null){
-			return true;
-		}else{
-			socket.emit("OnPlayerException",{});
+    function GetDateTime(){
+        return Date.now();
+    }
+    function IsGameCondition(){
+        if(IsPlayerExisted(socket.id)){
+            let roomId = objPlayers[socket.id].roomId;
+            if(IsRoomId(roomId)){
+                if(IsGameData(roomId)){
+                    return true;
+                }
+            }
         }
         return false;
-    }    
+    }
+    function IsPlayerExisted(sid){
+		if(objPlayers[sid] == null){
+            socket.emit("OnPlayerException",{});
+			return false;
+		}
+        return true;
+    }   
+    function IsGameData(roomId){
+        if(gameDatas[roomId] == null){
+            socket.emit("OnPlayerException",{});
+            return false;
+        }
+        return true;
+    } 
+    function IsRoomId(roomId){
+        if(roomId == "-1"){
+            socket.emit("OnPlayerException",{});
+            return false;
+        }
+        return true;
+    }
 });
 
 //catch if player has the same id
@@ -272,13 +292,7 @@ io.on('connection', function (socket) {
 //clear qaObject when game finish
 //game duration
 
-// var dn = Date.now(); 
-// dn += 60000;
-// var dt1 = new Date(dn);
-// console.log(" dn =  " + dt1.toTimeString());
-
-//these still not work yet. 
-
+//these still not work yet.
 process.on('unhandledRejection', (reason, p) => {
     console.error(reason, 'Unhandled Rejection at Promise', p);
   })
