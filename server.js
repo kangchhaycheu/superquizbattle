@@ -29,7 +29,7 @@ io.on('connection', function (socket) {
         PlayerLogin(data['playerId']);
     });
     socket.on('ServerTime', function (){
-        socket.emit('OnServerTime', {dateTime:GetDateTime()});
+        socket.emit('OnServerTime', {dateTime:''+GetDateTime()});
     });
     function PlayerLogin(playerId){
         var currentPlayer = {};
