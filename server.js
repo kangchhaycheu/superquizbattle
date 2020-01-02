@@ -250,7 +250,7 @@ io.on('connection', function (socket) {
 		}
     });
     function GetDateTime(){
-        return Date.now();
+        return Math.floor(Date.now()/1000);
     }
     function IsGameCondition(){
         if(IsPlayerExisted(socket.id)){
@@ -285,6 +285,8 @@ io.on('connection', function (socket) {
         return true;
     }
 });
+
+// console.log(Math.floor(Date.now()/1000));
 
 //catch if player has the same id
 //catch all exception send to client
