@@ -106,7 +106,7 @@ io.on('connection', function (socket) {
         data.round = round;
         let qa = qaControl.GetQuestion(pvpQuestionsControl[roomId].questionsIndex[data.round - 1]);
         data.question = qa.question;
-        data.timeEnd = GetDateTime() + questionDuration;
+        data.timeEnd = ""+GetDateTime() + questionDuration;
         data.answers = [];
         let nums = [0,1,2,3];
         for(let i = 0; i < 4; i++){
