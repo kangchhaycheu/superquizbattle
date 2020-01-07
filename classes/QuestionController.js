@@ -2,8 +2,8 @@ class QuestionControl{
     constructor(){
         this.questions = [];
     }
-    AddQuestion(id, question, answer, choice1,choice2,choice3,categoryId, difficulty){
-        let q = new Question(id,question, answer, choice1,choice2,choice3,categoryId, difficulty);
+    AddQuestion(id, question, answer, choice1,choice2,choice3,subjectId, difficulty){
+        let q = new Question(id,question, answer, choice1,choice2,choice3,subjectId, difficulty);
         this.questions.push(q);
     }
     GetQuestion(index){
@@ -30,12 +30,12 @@ class QuestionControl{
     }
 }
 
-function Question(id, question, answer, choice1,choice2,choice3,categoryId, difficulty){
+function Question(id, question, answer, choice1,choice2,choice3,subjectId, difficulty){
     this.id = id;
     this.question = question;
     this.answers = [answer,choice1,choice2,choice3]; // answers index 0 is correct answer.
     this.difficulty = difficulty;
-    this.categoryId = categoryId;
+    this.subjectId = subjectId;
 }
 
 var expQuestion = new QuestionControl();

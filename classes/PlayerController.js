@@ -44,7 +44,7 @@ class PlayerController{
     
 	NewPlayer(idType, id, playerName,socket){
 		var currentPlayer = {};
-		dbCon.Insert("INSERT INTO tblplayer (playerName,level,coin,trophy,isActive,lastLogin,"+idType+") VALUES ('"+playerName+"',1,0,0,1,'"+Date.now()+"','"+id+"')",function(result){
+		dbCon.Insert("INSERT INTO tblPlayer (playerName,level,coin,trophy,isActive,lastLogin,"+idType+") VALUES ('"+playerName+"',1,0,0,1,'"+Date.now()+"','"+id+"')",function(result){
 			currentPlayer.playerID = result.insertId;
 			currentPlayer.playerName = playerName;
             currentPlayer.level = 1;
@@ -77,15 +77,8 @@ class PlayerController{
 		socket.broadcast.to(othSid).emit("OnMatchFound", {'roomId': roomId,'opponentInfo':gp.PlayerInformation(socket.id)});
         socket.emit("OnMatchFound", {'roomId': roomId, 'opponentInfo':gp.PlayerInformation(othSid)});
         game.InitGame(socket.id,othSid,roomId);
-        // var p = {};
-        // var initPlayer = {status:gp.PlayerStatus.inGame, score:0,answers:[]};
-		// p[gp.objPlayers[othSid].playerId] = JSON.parse(JSON.stringify(initPlayer)); // not reference
-		// p[gp.objPlayers[socket.id].playerId] = JSON.parse(JSON.stringify(initPlayer));
-		// gameDatas[roomId] = {
-        //     gameStatus: 0,
-		// 	players: p
-        // }
     }
+
    CancelMatchFinding(socket){
 		if(gp.IsPlayerExisted(socket)){
 			if(gp.objPlayers[socket.id].status == gp.PlayerStatus.findMatch){
