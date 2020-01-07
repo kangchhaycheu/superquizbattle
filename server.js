@@ -42,11 +42,11 @@ io.on('connection', function (socket) {
     });
 
     socket.on('CancelMatchFinding',function (){
-        player.CancelMatchFinding(socekt);
+        player.CancelMatchFinding(socket);
 	});
 
     socket.on('Lobby',function(){
-        player.Lobby(socekt);
+        player.Lobby(socket);
     });
 
     socket.on('StartGame',function(){ //both player ping start game
