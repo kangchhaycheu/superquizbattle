@@ -1,5 +1,8 @@
+var objPlayers = {}
+var gameDatas = {};
+
 PlayerStatus = {
-    abc: "Disconnected",
+    disconnected: "Disconnected",
     online: "Online",
     home:"Home",
     findMatch: "FindMatch",
@@ -17,7 +20,7 @@ function GetPlayerIdFromObject(players){
 }
 
 function GetOpponentId(players,playerId){
-    let ids = this.GetPlayerIdFromObject(players);
+    let ids = GetPlayerIdFromObject(players);
     if(ids[0] == playerId){
         return ids[1];
     }else{
@@ -25,7 +28,64 @@ function GetOpponentId(players,playerId){
     }
 }
 
-module.exports = { PlayerStatus: PlayerStatus,GetOpponentId: GetOpponentId, GetPlayerIdFromObject: GetPlayerIdFromObject };
+function IsPlayerExisted(socket){
+    if(objPlayers[socket.id] == null){
+        EmitPlayerExcption(socket);
+        return false;
+    }
+    return true;
+}   
+function IsGameData(socket, roomId){
+    if(gameDatas[roomId] == null){
+        EmitPlayerExcption(socket);
+        return false;
+    }
+    return true;
+} 
+function IsRoomId(socket, roomId){
+    if(roomId == "-1"){
+        EmitPlayerExcption(socket);
+        return false;
+    }
+    return true;
+}
+
+function EmitPlayerExcption(socket){
+    if(objPlayers[socket.id] != null){
+        delete objPlayers[socket.id];
+    }
+    socket.emit("OnPlayerException",{});
+}
+function GetSocketId(playerId){
+    for(var sid in objPlayers){
+        if(objPlayers[sid].playerId == playerId){
+            return sid;
+        }
+    }
+    return -1;
+}
+function PlayerInformation(sid){
+    var pl = {
+        playerId : objPlayers[sid].playerId,
+        playerName : objPlayers[sid].playerName
+    };
+    return pl;
+}
+
+module.exports = { 
+    EmitPlayerExcption,
+    PlayerInformation,
+    GetSocketId,
+    PlayerStatus,
+    GetOpponentId,
+    GetPlayerIdFromObject,
+    IsPlayerExisted,
+    IsGameData,
+    IsRoomId,
+    objPlayers,
+    gameDatas
+};
+
 
 // module.exports.GetPlayerIdFromObject = function(players){
 //     var tempID = [];
