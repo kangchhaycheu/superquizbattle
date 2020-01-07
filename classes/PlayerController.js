@@ -30,8 +30,8 @@ class PlayerController{
 			}
 		}
         let currentPlayer = {};
-        let getPlayerID  = result['id'];
-        currentPlayer.playerId = getPlayerID;
+        let getPlayerId  = result['id'];
+        currentPlayer.playerId = getPlayerId;
         currentPlayer.playerName = result["playerName"];
         currentPlayer.level = result['level'];
         currentPlayer.status = gp.PlayerStatus.home;
@@ -45,7 +45,7 @@ class PlayerController{
 	NewPlayer(idType, id, playerName,socket){
 		var currentPlayer = {};
 		dbCon.Insert("INSERT INTO tblPlayer (playerName,level,coin,trophy,isActive,lastLogin,"+idType+") VALUES ('"+playerName+"',1,0,0,1,'"+Date.now()+"','"+id+"')",function(result){
-			currentPlayer.playerID = result.insertId;
+			currentPlayer.playerId = "111";//result.insertId;
 			currentPlayer.playerName = playerName;
             currentPlayer.level = 1;
             currentPlayer.status = gp.PlayerStatus.home;
