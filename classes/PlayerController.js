@@ -39,7 +39,7 @@ class PlayerController{
         socket.emit('OnLobby', currentPlayer);
         currentPlayer.roomId = '-1';
         gp.objPlayers[socket.id] = currentPlayer;
-		dbCon.Update("Update tblPlayer set isActive = 1, lastLogin = '"+Date.now()+"' where id = '" + getPlayerID + "'");
+		dbCon.Update("Update tblPlayer set isActive = 1, lastLogin = '"+Date.now()+"' where id = '" + getPlayerId + "'");
     }
     
 	NewPlayer(idType, id, playerName,socket){
