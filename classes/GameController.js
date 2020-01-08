@@ -7,8 +7,9 @@ class GameController{
         this.questionDuration = 10000; 
         this.answerTimer = {};
     }
-    InstantIO(io){
+    InstantObject(io,dbCon){
         cls.io = io;
+        cls.dbCon = dbCon;
     }
     InitGame(curSid, othSid, roomId){ // called in playerControll match found
         var p = {};
@@ -74,6 +75,7 @@ class GameController{
                 gd.players[playersId[i]].answers.push(0);
                 let json = {playerId: playersId[i], round:round,answerIndex:-1, score:gd.players[playersId[i]].score};
                 cls.io.to(roomId).emit('OnGameAnswer',json);
+                cls.AddAnswerHistory(playersId[i],0,qaControl.GetQuestion(cls.pvpQuestionsControl[roomId].questionsIndex[round - 1]));
             }
         }
         if(round == 10){
@@ -90,7 +92,10 @@ class GameController{
             },1 * 1000);
         }
     }
-
+    AddAnswerHistory(playerId,isCorrectAnswer,qaObj){
+        cls.dbCon.Insert("INSERT INTO tblAnswerHistory (tblPlayerId,isCorrectAnswer,tblSubjectId,tblQAId,actionDate) VALUES ('"
+                    +playerId+"',"+isCorrectAnswer+","+qaObj.subjectId+","+qaObj.id+",'"+Date.now()+"')", function(result){});
+    }
     GameAnswer(socket, data){
         if(!cls.IsGameCondition(socket)){
             return;
@@ -99,19 +104,21 @@ class GameController{
         let gd = gp.gameDatas[pl.roomId];
         let round = gd.round; 
         if(gd.players[pl.playerId].answers.length == round - 1){
+            let isCorrect = 0;
             if(data['answerIndex'] == gd.correctIndex){ //correc Answer
                 let millisec = gd.timeEnd - Date.now(); //remain millisec 
                 let score = 100 + (Math.floor(millisec / 100));
                 gd.players[pl.playerId].answers.push(1);
                 gd.players[pl.playerId].score += score;
+                isCorrect = 1;
             }else{
                 gd.players[pl.playerId].answers.push(0);
             }
+            cls.AddAnswerHistory(pl.playerId,isCorrect,qaControl.GetQuestion(cls.pvpQuestionsControl[pl.roomId].questionsIndex[round - 1]));
         }else if(gd.players[pl.playerId].answers.length == round){ // player round different from game round
             socket.emit('OnGameAnswer', {failed: "answered"});
             return;
         }else{
-            // socket.emit("OnPlayerException",{});
             gp.EmitPlayerExcption(socket);
             return;
         }
@@ -119,6 +126,7 @@ class GameController{
         if(gd.players[oppId].status == gp.PlayerStatus.disconnected){
             if(gd.players[oppId].answers.length == round - 1){
                 gd.players[oppId].answers.push(0);
+                cls.AddAnswerHistory(oppId,0,qaControl.GetQuestion(cls.pvpQuestionsControl[pl.roomId].questionsIndex[round - 1]));
             }
         }
         let json = {playerId: pl.playerId, round:round,answerIndex:data['answerIndex'], score:gd.players[pl.playerId].score};

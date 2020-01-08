@@ -1,6 +1,7 @@
 class QuestionControl{
     constructor(){
         this.questions = [];
+        this.subjects = {};
     }
     AddQuestion(id, question, answer, choice1,choice2,choice3,subjectId, difficulty){
         let q = new Question(id,question, answer, choice1,choice2,choice3,subjectId, difficulty);
@@ -27,6 +28,12 @@ class QuestionControl{
             }
         }
         return randomedIndex;
+    }
+    AddSubject(subjectId, subjectName){
+        this.subjects[subjectId] = {name:subjectName};
+    }
+    GetSubject(subjectId){
+        return this.subjects[subjectId];
     }
 }
 

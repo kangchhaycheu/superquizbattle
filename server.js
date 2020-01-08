@@ -1,7 +1,7 @@
 var io = require('socket.io')(3000);
 var shortId = require('shortid');
 
-var gp = require('./classes/GameProperty.js');
+// var gp = require('./classes/GameProperty.js');
 var dbCon = require('./dbControl.js');
 var player = require('./classes/PlayerController.js');
 var qaControl = require('./classes/QuestionController.js');
@@ -9,13 +9,23 @@ var game = require('./classes/GameController.js');
 
 
 
-let categoryId = 0; 
+let subjectId = 1; 
 for(var i = 0; i < 40; i++){
-    qaControl.AddQuestion(i,"Is this a hard Question with Number " + i,"Correct Answer " + i,"Wrong Answer 1","Wrong Answer 2","Wrong Answer 3",categoryId,"1");
-    if(i % 5 == 0){
-        categoryId ++;
+    qaControl.AddQuestion(i,"Is this a hard Question with Number " + i,"Correct Answer " + i,"Wrong Answer 1","Wrong Answer 2","Wrong Answer 3",subjectId,"1");
+    if(i % 5 == 0 && i != 0){
+        subjectId ++;
     }
 }
+
+dbCon.Select("Select * From tblSubject", function(result){
+    if(result.length > 0){
+        for(let i = 0; i < result.length; i++){
+            let res = result[i];
+            qaControl.AddSubject(res['id'],res['subject']);
+        }
+    }
+});
+
 // dbCon.Select("SELECT * FROM tblQA", function(result){ 
 // 	if(result.length > 0){
 // 		for(var i = 0; i < result.length; i++){
@@ -26,8 +36,9 @@ for(var i = 0; i < 40; i++){
 //     // console.log("quest = " + qaControl.GetQuestion()["question"] + " answer = " + qaControl.GetQuestion().answer);
 // });
 
+game.InstantObject(io,dbCon);
+player.InstantObject(io,dbCon,qaControl);
 
-game.InstantIO(io);
 io.on('connection', function (socket) {
     socket.on('PlayerLogin',function(data){
         player.Login(socket,data);
@@ -56,6 +67,10 @@ io.on('connection', function (socket) {
     socket.on ('GameAnswer',function(data){
         game.GameAnswer(socket,data);
     });
+    socket.on ('PlayerHistory',function(data){
+        player.PlayerHistory(socket);
+    });
+
 
     socket.on('disconnect', function (){
         player.Disconnected(socket);

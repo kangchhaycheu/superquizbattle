@@ -1,22 +1,26 @@
-var dbCon = require('../dbControl.js');
+// var dbCon = require('../dbControl.js');
 var gp = require('./GameProperty.js');
 var game = require('./GameController.js');
 var shortId = require('shortid');
 
 class PlayerController{
-
+    InstantObject(io,dbCon, qaControl){
+        cls.io = io;
+        cls.dbCon = dbCon;
+        cls.qaControl = qaControl;
+    }
     Login(socket, data){
         if(data["loginAs"] == "guest"){
-            pc.LoginAsGuest(socket,data);
+            cls.LoginAsGuest(socket,data);
         }
     }
 
     LoginAsGuest(socket, data){
-		dbCon.Select("SELECT * FROM tblPlayer where guestId = '" + data['id'] + "'",function(result){
+		cls.dbCon.Select("SELECT * FROM tblPlayer where guestId = '" + data['id'] + "'",function(result){
 			if(result.length > 0){
-				pc.ExistedPlayer(socket, result[0]);
+				cls.ExistedPlayer(socket, result[0]);
 			}else{
-				pc.NewPlayer("guestId",data['id'],"Guest",socket);
+				cls.NewPlayer("guestId",data['id'],"Guest",socket);
 			}
 		});
     }
@@ -39,12 +43,12 @@ class PlayerController{
         socket.emit('OnLobby', currentPlayer);
         currentPlayer.roomId = '-1';
         gp.objPlayers[socket.id] = currentPlayer;
-		dbCon.Update("Update tblPlayer set isActive = 1, lastLogin = '"+Date.now()+"' where id = '" + getPlayerId + "'");
+		cls.dbCon.Update("Update tblPlayer set isActive = 1, lastLogin = '"+Date.now()+"' where id = '" + getPlayerId + "'");
     }
     
 	NewPlayer(idType, id, playerName,socket){
 		var currentPlayer = {};
-		dbCon.Insert("INSERT INTO tblPlayer (playerName,level,coin,trophy,isActive,lastLogin,"+idType+") VALUES ('"+playerName+"',1,0,0,1,'"+Date.now()+"','"+id+"')",function(result){
+		cls.dbCon.Insert("INSERT INTO tblPlayer (playerName,level,coin,trophy,isActive,lastLogin,"+idType+") VALUES ('"+playerName+"',1,0,0,1,'"+Date.now()+"','"+id+"')",function(result){
 			currentPlayer.playerId = result.insertId;
 			currentPlayer.playerName = playerName;
             currentPlayer.level = 1;
@@ -62,7 +66,7 @@ class PlayerController{
             gp.objPlayers[socket.id].status = gp.PlayerStatus.findMatch;
             for(var sid in gp.objPlayers){ //loop through all find match player
 				if(gp.objPlayers[sid].status == gp.PlayerStatus.findMatch && sid != socket.id){// && IsMmrMatch(plMmr,gp.objPlayers[sid].mmr,(findRange * 150))){ disable mmr for test
-					pc.SetDetailMatchFound(socket,sid);
+					cls.SetDetailMatchFound(socket,sid);
 				}
 			}
         }
@@ -94,10 +98,26 @@ class PlayerController{
             socket.emit('OnLobby',gp.objPlayers[socket.id]);
         }
     }
+    PlayerHistory(socket){
+        if(gp.IsPlayerExisted(socket)){
+            cls.dbCon.Select("SELECT tblSubjectId, COUNT(*) as totalAnswer, SUM(isCorrectAnswer) as correctCount FROM tblAnswerHistory WHERE tblPlayerId = "
+            +gp.objPlayers[socket.id].playerId+" GROUP BY tblSubjectId",function(result){
+                let data = [];
+                if(result.length > 0){
+                    for(let i = 0; i < result.length; i++){
+                        let res = result[i];
+                        let sub = {"subjectId":res['tblSubjectId'],"subjectName":cls.qaControl.GetSubject(res['tblSubjectId']),"totalAnswer":res['totalAnswer'],"correctCount":res['correctCount']};
+                        data.push (sub);
+                    }
+                }
+                socket.emit("OnPlayerHistory",{data:data});
+            });
+        }
+    }
     Disconnected(socket){
         if(gp.IsPlayerExisted(socket)){
             var pl = gp.objPlayers[socket.id];
-            dbCon.Update("Update tblPlayer set isActive = 0 where id = '" + pl.playerId + "'");
+            cls.dbCon.Update("Update tblPlayer set isActive = 0 where id = '" + pl.playerId + "'");
             var gd = gp.gameDatas[pl.roomId];
             if(pl.status == gp.PlayerStatus.inGame){ // disconnect while in game
                 if(gd != null){ //game still in process
@@ -106,7 +126,7 @@ class PlayerController{
                         delete gp.gameDatas[pl.roomId];
                         delete game.pvpQuestionsControl[pl.roomId]; 
                     }else{
-                        io.to(pl.roomId).emit('OnOpponentDisconnected',{id:pl.playerId}); // send to another player except disconnector
+                        cls.io.to(pl.roomId).emit('OnOpponentDisconnected',{id:pl.playerId}); // send to another player except disconnector
                     }
                 }
             }
@@ -114,7 +134,7 @@ class PlayerController{
         }
     }
 }
-var pc = new PlayerController();
-module.exports = pc;
+var cls = new PlayerController();
+module.exports = cls;
 
 
