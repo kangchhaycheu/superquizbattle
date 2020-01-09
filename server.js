@@ -67,10 +67,10 @@ io.on('connection', function (socket) {
     socket.on ('GameAnswer',function(data){
         game.GameAnswer(socket,data);
     });
+    
     socket.on ('PlayerHistory',function(data){
         player.PlayerHistory(socket);
     });
-
 
     socket.on('disconnect', function (){
         player.Disconnected(socket);

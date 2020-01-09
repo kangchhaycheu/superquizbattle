@@ -20,6 +20,14 @@ class GameController{
             gameStatus: 0,
 			players: p
         }
+        cls.answerTimer[roomId] = {
+            timer:setTimeout(() => {
+                cls.io.to(roomId).emit('OnGameFailedToStart',{});
+                if(gp.gameDatas[roomId] != null){
+                    delete gp.gameDatas[roomId];
+                }
+            },20000)//wait 20sec
+        };
     }
     PingStartGame(socket){ //both player ping start game
         if(!cls.IsGameCondition(socket)){
@@ -32,6 +40,7 @@ class GameController{
         gp.objPlayers[sid].status = gp.PlayerStatus.inGame;
         gp.gameDatas[roomId].gameStatus = status + 1;
         if(gp.gameDatas[roomId].gameStatus == 2){
+            clearTimeout(cls.answerTimer[roomId].timer);
             cls.pvpQuestionsControl[roomId] = {questionsIndex: qaControl.GenerateQuestionsIndex()};
             gp.gameDatas[roomId] = cls.GetGameData(1, roomId, gp.gameDatas[roomId].players);
             cls.io.to(roomId).emit('OnGameStarted',gp.gameDatas[roomId]);

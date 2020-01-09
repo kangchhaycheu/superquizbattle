@@ -1,9 +1,7 @@
 # superquizbattle
 
 ## Todo
-- catch the same id in game exception
-- Database
-- Track answer
+- condition if match failed to start
 
 ## Game Algorithm
 - Score = 100 + (remain millisecond / 100), ex: remain 10 seconds for time end, score = 200, => 100 + (10000/ 100);
