@@ -9,6 +9,7 @@ class PlayerController{
         cls.dbCon = dbCon;
         cls.qaControl = qaControl;
     }
+
     Login(socket, data){
         if(data["loginAs"] == "guest"){
             cls.LoginAsGuest(socket,data);
@@ -39,6 +40,7 @@ class PlayerController{
         currentPlayer.playerName = result["playerName"];
         currentPlayer.level = result['level'];
         currentPlayer.status = gp.PlayerStatus.home;
+        currentPlayer.trophy = result['trophy'];
         currentPlayer.isNewPlayer = false;
         socket.emit('OnLobby', currentPlayer);
         currentPlayer.roomId = '-1';
@@ -54,6 +56,7 @@ class PlayerController{
             currentPlayer.level = 1;
             currentPlayer.status = gp.PlayerStatus.home;
             currentPlayer.isNewPlayer = true;
+            currentPlayer.trophy = 0;
             socket.emit('OnLobby', currentPlayer);
             currentPlayer.roomId = '-1'
             gp.objPlayers[socket.id] = currentPlayer;
@@ -98,6 +101,7 @@ class PlayerController{
             socket.emit('OnLobby',gp.objPlayers[socket.id]);
         }
     }
+
     PlayerHistory(socket){
         if(gp.IsPlayerExisted(socket)){
             cls.dbCon.Select("SELECT tblSubjectId, COUNT(*) as totalAnswer, SUM(isCorrectAnswer) as correctCount FROM tblAnswerHistory WHERE tblPlayerId = "
@@ -114,6 +118,7 @@ class PlayerController{
             });
         }
     }
+
     Disconnected(socket){
         if(gp.IsPlayerExisted(socket)){
             var pl = gp.objPlayers[socket.id];
@@ -134,6 +139,7 @@ class PlayerController{
         }
     }
 }
+
 var cls = new PlayerController();
 module.exports = cls;
 

@@ -151,19 +151,47 @@ class GameController{
     }
     EmitGameFinish(roomId){
         let ids = gp.GetPlayerIdFromObject(gp.gameDatas[roomId].players);
-        let winner = "gameDraw";
-        if(gp.gameDatas[roomId].players[ids[0]].score > gp.gameDatas[roomId].players[ids[1]].score){
-            winner = ids[0];
-        }else if(gp.gameDatas[roomId].players[ids[0]].score < gp.gameDatas[roomId].players[ids[1]].score){
-            winner = ids[1];
-        }
-        let js = {
-            winner: winner,
-            players: gp.gameDatas[roomId].players
-        };
-        cls.io.to(roomId).emit('OnGameFinished',js);
-        delete gp.gameDatas[roomId];
-        delete cls.pvpQuestionsControl[roomId];
+        cls.dbCon.Select("SELECT trophy, id FROM tblPlayer where id = " + ids[0] + " or id = " + ids[1],function(result){ //select db cuz player can be disconnected
+            let playersId = [];
+            let trophies = [];
+            let winner = result[0]['id'];
+            if(gp.gameDatas[roomId].players[result[0]['id']].score > gp.gameDatas[roomId].players[result[1]['id']].score){
+                for(let i = 0; i < 2; i++){
+                    playersId.push(result[i]['id']);
+                    trophies.push(result[i]['trophy']);
+                }
+            }else if(gp.gameDatas[roomId].players[result[0]['id']].score < gp.gameDatas[roomId].players[result[1]['id']].score){
+                for(let i = 1; i > -1; i--){
+                    playersId.push(result[i]['id']);
+                    trophies.push(result[i]['trophy']);
+                }
+                winner = result[1]['id'];
+            }else{
+                winner = "gameDraw";
+            }
+            if(winner != "gameDraw"){
+                trophies[0] += 25;
+                trophies[1] -= 20;
+                if(trophies[1] < 0){
+                    trophies[1] = 0;
+                }
+            }
+            let playerData = gp.gameDatas[roomId].players;
+            for(let i = 0; i < 2; i++){
+                let getSid = gp.GetSocketId(playersId[i]);
+                if(getSid != -1){
+                    gp.objPlayers[getSid].trophy = trophies[i];
+                }
+                playerData[playersId[i]].trophy = trophies[i];
+            }
+            let js = {
+                winner: winner,
+                players: playerData
+            };
+            cls.io.to(roomId).emit('OnGameFinished',js);
+            cls.dbCon.Update("UPDATE tblPlayer t1 JOIN tblPlayer t2 ON t1.id = '"+playersId[0]+"' AND t2.id = '"+playersId[1]+"' SET t1.trophy = "
+                            +trophies[0]+", t2.trophy = "+trophies[1]);	
+        });
     }
 
     IsGameCondition(socket){
