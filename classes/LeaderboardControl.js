@@ -39,7 +39,7 @@ class LeaderboardControl{
         return moment().isoWeekYear() + ""+ moment().isoWeek();
     }
 
-    GetWeeklyLeaderboard(){
+    GetWeeklyLeaderboard(socket){
         let weekId; 
         let remainSnd = moment().diff(startDate);
         let isRunning = false;
@@ -67,9 +67,10 @@ class LeaderboardControl{
             json.players = [];
             if(result.length > 0){
                 json.players = result;
-            } console.log(JSON.stringify(json));
+            }
+            //  console.log(JSON.stringify(json));
+            socket.emit("OnWeeklyLeaderboard",{data:json});
         });
-        // console.log(JSON.stringify(json));
     }
 
     GetRemainSecond(){

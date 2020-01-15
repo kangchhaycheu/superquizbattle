@@ -76,8 +76,8 @@ io.on('connection', function (socket) {
         player.PlayerHistory(socket);
     });
 
-    socket.on('Leaderboard',function(){
-       
+    socket.on('WeeklyLeaderboard',function(){
+       lc.GetWeeklyLeaderboard(socket);
     });
 
     socket.on('disconnect', function (){
@@ -92,7 +92,6 @@ io.on('connection', function (socket) {
 
 // let ww = moment().isoWeekYear() + ""+ moment().isoWeek();
 // console.log(ww);
-lc.GetWeeklyLeaderboard();
 // console.log(nextWeekDate.diff(moment()));
 //catch if player has the same id
 //catch all exception send to client
