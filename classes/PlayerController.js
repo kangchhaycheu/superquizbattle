@@ -118,6 +118,7 @@ class PlayerController{
             });
         }
     }
+    
 
     Disconnected(socket){
         if(gp.IsPlayerExisted(socket)){

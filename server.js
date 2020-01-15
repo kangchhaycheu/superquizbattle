@@ -1,13 +1,13 @@
 var io = require('socket.io')(3000);
 var shortId = require('shortid');
+var moment = require('moment');
 
 // var gp = require('./classes/GameProperty.js');
 var dbCon = require('./dbControl.js');
 var player = require('./classes/PlayerController.js');
 var qaControl = require('./classes/QuestionController.js');
 var game = require('./classes/GameController.js');
-
-
+var lc = require('./classes/LeaderboardControl.js');
 
 let subjectId = 1; 
 for(var i = 0; i < 40; i++){
@@ -26,6 +26,9 @@ dbCon.Select("Select * From tblSubject", function(result){
     }
 });
 
+// let aa = new leaderboard(dbCon);
+// aa.SubmitScore("0001",12);
+
 // dbCon.Select("SELECT * FROM tblQA", function(result){ 
 // 	if(result.length > 0){
 // 		for(var i = 0; i < result.length; i++){
@@ -36,8 +39,9 @@ dbCon.Select("Select * From tblSubject", function(result){
 //     // console.log("quest = " + qaControl.GetQuestion()["question"] + " answer = " + qaControl.GetQuestion().answer);
 // });
 
-game.InstantObject(io,dbCon);
+game.InstantObject(io,dbCon,lc);
 player.InstantObject(io,dbCon,qaControl);
+lc.InstantObject(dbCon,moment);
 
 io.on('connection', function (socket) {
     socket.on('PlayerLogin',function(data){
@@ -72,6 +76,10 @@ io.on('connection', function (socket) {
         player.PlayerHistory(socket);
     });
 
+    socket.on('Leaderboard',function(){
+       
+    });
+
     socket.on('disconnect', function (){
         player.Disconnected(socket);
     });
@@ -81,10 +89,68 @@ io.on('connection', function (socket) {
     // }
 });
 
+
+// let ww = moment().isoWeekYear() + ""+ moment().isoWeek();
+// console.log(ww);
+lc.GetWeeklyLeaderboard();
+// console.log(nextWeekDate.diff(moment()));
 //catch if player has the same id
 //catch all exception send to client
 //clear qaObject when game finish
 //game duration
+
+// console.log("w = " + moment("2020-W01-1").toDate());
+// console.log("w = " + moment().isoWeekday(2).toDate());
+// console.log("w = " + moment("2020-01-01", "YYYY-MM-DD").isoWeekday(3).toDate());
+
+// let startDate = moment({hour:09,minute:00,second:00}).isoWeekday(1);
+// let endDate = moment({hour:10,minute:01,second:00}).isoWeekday(2);
+// // console.log(startDate.toString());
+// let rsnd = endDate.diff(moment());
+
+// console.log(moment(rsnd).format('D[ day(s)] H[ hour(s)] m[ minute(s)] s[ second(s) ago.]'));
+// console.log(rsnd);
+
+// setInterval(function() { loop
+//     let rsnd = endDate.diff(moment());
+//     console.log(rsnd);
+// }, 1000);
+// console.log(moment().isoWeek());
+// console.log(moment("2021-01-01", "YYYY-MM-DD").isoWeekYear());
+
+
+// $now = new DateTime(date("Y-m-d H:i:s"));
+// $weekNumber = $now->format("W"); // W = week number of the year, and start from monday
+// $year = $now->format("o"); // Y = year 2019
+// $startDate = new DateTime(date("l, M jS, Y", strtotime($year."W".$weekNumber."1")));
+// $startDate->add(new DateInterval('PT9H0M0S'))->format('Y-m-d H:i:s');
+// $endDate = new DateTime(date("l, M jS, Y", strtotime($year."W".$weekNumber."6"))); //result = Sunday, Sep 1st, 2019 (current date = tue Aug 27, 2019). 7 stand for sunday
+// $endDate->add(new DateInterval('PT21H0M0S'))->format('Y-m-d H:i:s'); //added 21 hour let end = 9pm. timespan format = 'P' = Date , T = time 'ex: P7Y5M4DT4H3M2S, PT = date is null';
+
+// $remindSecond = $endDate->getTimestamp() - $now->getTimestamp(); //return total seconds. //print_r( $remindSecond);
+// $result->weekID = $year."".$weekNumber;
+// if($startDate > $now){ // event not yet start
+//     $result->eventCode = 2;
+//     $result->remindSeconds = $startDate->getTimestamp() - $now->getTimestamp();
+// }else{
+//     if($remindSecond > 0){ // during event
+//         $result->eventCode = 1;
+//         $result->remindSeconds = $remindSecond;
+//     }else{ // event ended
+//         $result->eventCode = 3;
+//         $startDate->add(new DateInterval('P0Y0M7D'));
+//         $result->remindSeconds = $startDate->getTimestamp() - $now->getTimestamp();
+
+//     }
+// }
+// if($result->eventCode == 3){
+//     $result->lastWeekID = $result->weekID;
+// }else{
+//     $subtW = $now->modify("-7 day");
+//     $lw = $subtW->format("W");
+//     $ly = $subtW->format("o");
+//     $result->lastWeekID = $ly."".$lw;
+// }
 
 //these still not work yet.
 process.on('unhandledRejection', (reason, p) => {
@@ -99,128 +165,3 @@ process.on('unhandledRejection', (reason, p) => {
     process.exit(1);
   }) ;
 console.log("------- server is running -------");
-
-
-// var gp.objPlayers = {};
-// var gameDatas = {};
-// var pvpQuestionsControl = {};
-// var answerTimer = {};
-// let questionDuration = 10000; 
-
-
-
-    // function PlayerLogin(playerId){
-    //     var currentPlayer = {};
-    //     currentPlayer.playerId = playerId;
-    //     currentPlayer.playerName = "Guest " + playerId;
-    //     currentPlayer.status = gp.PlayerStatus.home;
-    //     socket.emit('OnLobby', currentPlayer);
-    //     currentPlayer.roomId = "-1";
-    //     gp.objPlayers[socket.id] = currentPlayer;
-    // }
-
-        // function PlayerInformation(sid){
-	// 	var pl = {
-    //         playerId : gp.objPlayers[sid].playerId,
-    //         name : gp.objPlayers[sid].playerName
-    //     };
-	// 	return pl;
-    // }
-    
-    // function IsGameCondition(){
-    //     if(gp.IsPlayerExisted(socket)){
-    //         let roomId = gp.objPlayers[socket.id].roomId;
-    //         if(gp.IsRoomId(socket, roomId)){
-    //             if(gp.IsGameData(socket, roomId)){
-    //                 return true;
-    //             }
-    //         }
-    //     }
-    //     return false;
-    // }
-    // function IsPlayerExisted(sid){
-	// 	if(gp.objPlayers[sid] == null){
-    //         socket.emit("OnPlayerException",{});
-	// 		return false;
-	// 	}
-    //     return true;
-    // }   
-    // function IsGameData(roomId){
-    //     if(gameDatas[roomId] == null){
-    //         socket.emit("OnPlayerException",{});
-    //         return false;
-    //     }
-    //     return true;
-    // } 
-    // function IsRoomId(roomId){
-    //     if(roomId == "-1"){
-    //         socket.emit("OnPlayerException",{});
-    //         return false;
-    //     }
-    //     return true;
-    // }
-
-        // function EmitGameFinish(roomId){
-    //     let ids = gp.GetPlayerIdFromObject(gameDatas[roomId].players);
-    //     let winner = "gameDraw";
-    //     if(gameDatas[roomId].players[ids[0]].score > gameDatas[roomId].players[ids[1]].score){
-    //         winner = ids[0];
-    //     }else if(gameDatas[roomId].players[ids[0]].score < gameDatas[roomId].players[ids[1]].score){
-    //         winner = ids[1];
-    //     }
-    //     let js = {
-    //         winner: winner,
-    //         players: gameDatas[roomId].players
-    //     };
-    //     io.to(roomId).emit('OnGameFinished',js);
-    //     delete gameDatas[roomId];
-    //     delete pvpQuestionsControl[roomId];
-    // }
-    // function GetGameData(round,roomId,players){
-    //     let data = {};
-    //     data.gameStatus = gp.PlayerStatus.running;
-    //     data.round = round;
-    //     let qa = qaControl.GetQuestion(pvpQuestionsControl[roomId].questionsIndex[data.round - 1]);
-    //     data.question = qa.question;
-    //     data.timeEnd = '' + (Date.now() + questionDuration);// Math.floor((Date.now() + questionDuration) /1000);
-    //     data.answers = [];
-    //     let nums = [0,1,2,3];
-    //     for(let i = 0; i < 4; i++){
-    //         j = Math.floor(Math.random() * nums.length);
-    //         data.answers.push(qa.answers[nums[j]]);
-    //         if(nums[j] == 0){ // answers index 0 is correct answer; 
-    //             data.correctIndex = i;
-    //         }
-    //         nums.splice(j,1);
-    //     }
-    //     data.players = players;
-    //     return data;
-    // }
-    // function SetAnswerTimer(roomId){
-    //     let gd = gameDatas[roomId];
-    //     if(gd == null){
-    //         return;
-    //     }
-    //     let round = gd.round; 
-    //     let playersId = gp.GetPlayerIdFromObject(gd.players);
-    //     for(let i = 0; i < 2; i++){
-    //         if(gd.players[playersId[i]].answers.length == round - 1){
-    //             gd.players[playersId[i]].answers.push(0);
-    //             let json = {playerId: playersId[i], round:round,answerIndex:-1, score:gd.players[playersId[i]].score};
-    //             io.to(roomId).emit('OnGameAnswer',json);
-    //         }
-    //     }
-    //     if(round == 10){
-    //         EmitGameFinish(roomId);
-    //     }else{ // move next
-    //         setTimeout(function(){
-    //             gameDatas[roomId] = GetGameData(round + 1, roomId, gameDatas[roomId].players);
-    //             io.to(roomId).emit('OnGameNextQuestion',gameDatas[roomId]);
-    //             answerTimer[roomId] = {
-    //                 timer:setTimeout(() => {
-    //                     SetAnswerTimer(roomId);
-    //                 }, questionDuration)
-    //             };
-    //         },1 * 1000);
-    //     }
-    // }

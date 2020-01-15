@@ -7,9 +7,10 @@ class GameController{
         this.questionDuration = 10000; 
         this.answerTimer = {};
     }
-    InstantObject(io,dbCon){
+    InstantObject(io,dbCon,leaderboard){
         cls.io = io;
         cls.dbCon = dbCon;
+        cls.lc = leaderboard;
     }
     InitGame(curSid, othSid, roomId){ // called in playerControll match found
         var p = {};
@@ -160,6 +161,7 @@ class GameController{
     }
     EmitGameFinish(roomId){
         let ids = gp.GetPlayerIdFromObject(gp.gameDatas[roomId].players);
+        let winnerAdd = 25, loserMinus = -20;
         cls.dbCon.Select("SELECT trophy, id FROM tblPlayer where id = " + ids[0] + " or id = " + ids[1],function(result){ //select db cuz player can be disconnected
             let playersId = [];
             let trophies = [];
@@ -177,10 +179,14 @@ class GameController{
                 winner = result[1]['id'];
             }else{
                 winner = "gameDraw";
+                for(let i = 0; i < 2; i++){
+                    playersId.push(result[i]['id']);
+                    trophies.push(result[i]['trophy']);
+                }
             }
             if(winner != "gameDraw"){
-                trophies[0] += 25;
-                trophies[1] -= 20;
+                trophies[0] += winnerAdd;
+                trophies[1] -= loserMinus;
                 if(trophies[1] < 0){
                     trophies[1] = 0;
                 }
@@ -200,6 +206,8 @@ class GameController{
             cls.io.to(roomId).emit('OnGameFinished',js);
             cls.dbCon.Update("UPDATE tblPlayer t1 JOIN tblPlayer t2 ON t1.id = '"+playersId[0]+"' AND t2.id = '"+playersId[1]+"' SET t1.trophy = "
                             +trophies[0]+", t2.trophy = "+trophies[1]);	
+            cls.lc.WeeklyTrophySubmit(playersId[0],winnerAdd);
+            cls.lc.WeeklyTrophySubmit(playersId[1],loserMinus);
         });
     }
 
